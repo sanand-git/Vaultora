@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Registered platform users with credentials and access configuration.
+/// Passwords stored as bcrypt hashes (cost factor 12).
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  passwordHash        String
+  name                String
+  role                String    @default("holder") // admin | compliance | operator | auditor | holder
+  title               String    @default("")
+  entityType          String    @default("individual") // individual | institutional
+  kycStatus           String    @default("pending") // verified | pending | review_required
+  kycTier             String    @default("tier1") // tier1 | tier2 | tier3
+  dailyMax            Float     @default(500000)
+  dualApprovalThreshold Float   @default(50000)
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  lastLoginIp         String?
+  mustChangePassword  Boolean   @default(false)
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  sessions   Session[]
+  auditLogs  AuditLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+/// Server-side session tokens. Each login creates a new session record.
+/// Token hashes are stored (never plaintext tokens). Sessions expire and 
+/// are bound to the originating IP for session-fixation protection.
+model Session {
+  id          String   @id @default(uuid())
+  userId      String
+  tokenHash   String   @unique
+  ipAddress   String
+  userAgent   String   @default("")
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+/// Immutable audit log entries. Every security-relevant action is recorded
+/// with a SHA-256 hash signature for tamper detection.
+model AuditLog {
+  id            String   @id @default(uuid())
+  timestamp     DateTime @default(now())
+  actorId       String?
+  actorEmail    String
+  actorRole     String
+  action        String
+  resource      String   @default("")
+  details       String
+  ipAddress     String   @default("")
+  userAgent     String   @default("")
+  severity      String   @default("info") // info | warning | critical
+  hashSignature String
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([timestamp])
+  @@index([action])
+  @@index([severity])
+}
+
+/// CSRF tokens stored server-side to prevent cross-site request forgery.
+model CsrfToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  sessionId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([sessionId])
+  @@index([expiresAt])
+}
+

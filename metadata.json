@@ -1,0 +1,6 @@
+{
+  "name": "Vaultora",
+  "description": "Cryptographically auditable money movement and treasury ledger with role-based access control, institutional onboarding, and provable Merkle accounting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
