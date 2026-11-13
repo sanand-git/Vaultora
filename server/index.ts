@@ -1111,13 +1111,17 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Start listener
-const server = app.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`[Vaultora Server] Listening on http://localhost:${PORT} and http://127.0.0.1:${PORT}`);
-});
+// Start listener (in standalone server mode)
+if (!process.env.VERCEL) {
+  const server = app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`[Vaultora Server] Listening on http://localhost:${PORT} and http://127.0.0.1:${PORT}`);
+  });
 
-process.on('SIGTERM', async () => {
-  console.log('Shutting down server gracefully...');
-  server.close();
-  await prisma.$disconnect();
-});
+  process.on('SIGTERM', async () => {
+    console.log('Shutting down server gracefully...');
+    server.close();
+    await prisma.$disconnect();
+  });
+}
+
+export default app;
